@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Roadmapper{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script>
+        {% comment %}
+        Every htmx request (hx-post/hx-get, e.g. member add/remove on the
+        project settings page) needs Django's CSRF header attached, same
+        as the hand-rolled fetch() calls in board.js do — this listener
+        patches it onto every outgoing htmx request site-wide so
+        individual hx-* attributes don't each need their own hx-headers.
+        {% endcomment %}
+        document.addEventListener("htmx:configRequest", function (event) {
+            function getCookie(name) {
+                const match = document.cookie.match("(^|;\\s*)" + name + "=([^;]*)");
+                return match ? decodeURIComponent(match[2]) : null;
+            }
+            event.detail.headers["X-CSRFToken"] = getCookie("csrftoken");
+        });
+    </script>
+    <style>
+        html, body { height: 100%; }
+        body { font-family: system-ui, sans-serif; margin: 0; background: #f5f6f8; color: #1a1a1a; display: flex; flex-direction: column; }
+        header { background: #202b3c; color: #fff; padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        header a { color: #fff; text-decoration: none; font-weight: 600; }
+        header nav a { color: #cfd8e3; margin-left: 1rem; font-weight: 400; }
+        main.default-main { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+        main.board-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        .card { background: #fff; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #e5e7eb; }
+        .btn { display: inline-block; background: #2563eb; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+        .btn.secondary { background: #6b7280; }
+        .btn.danger { background: #dc2626; }
+        input, textarea, select { padding: 0.4rem; border: 1px solid #d1d5db; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        label { display: block; margin-bottom: 0.75rem; font-size: 0.9rem; }
+        .messages { list-style: none; padding: 0; }
+        .messages li { background: #fef9c3; padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header>
+    <a href="/">Roadmapper</a>
+    <nav>
+        {% if user.is_authenticated %}
+            <span>{{ user.username }}</span>
+            <form method="post" action="{% url 'logout' %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn secondary" style="margin-left: 1rem;">Log out</button>
+            </form>
+        {% else %}
+            <a href="{% url 'login' %}">Log in</a>
+        {% endif %}
+    </nav>
+</header>
+{% comment %}
+main_class lets a child template (e.g. board.html) swap in a full-height
+flex layout instead of the default centered/padded content column, since
+the board needs the whole viewport rather than a max-width article layout.
+{% endcomment %}
+<main class="{% block main_class %}default-main{% endblock %}">
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+        </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,17 @@
+name: roadmapper
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: roadmapper
+      POSTGRES_PASSWORD: roadmapper
+      POSTGRES_DB: roadmapper
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

@@ -1,0 +1,32 @@
+{% comment %}
+Partial re-rendered via htmx after add/remove (see hx-target/hx-swap
+below and in settings.html's "Add member" form): the server returns just
+this fragment, and hx-swap="outerHTML" replaces the whole #member-list
+div with it — the id must be kept in sync with the hx-target selectors
+that reference it.
+{% endcomment %}
+<div id="member-list">
+    <table>
+        <thead><tr><th>User</th><th>Role</th><th></th></tr></thead>
+        <tbody>
+            {# Owner is listed but has no Remove button; not a regular membership row #}
+            <tr>
+                <td>{{ project.owner.username }}</td>
+                <td>Owner</td>
+                <td></td>
+            </tr>
+            {% for membership in members %}
+            <tr>
+                <td>{{ membership.user.username }}</td>
+                <td>{{ membership.get_role_display }}</td>
+                <td>
+                    <button class="btn danger"
+                            hx-post="{% url 'projects:member_remove' project.pk membership.user.pk %}"
+                            hx-target="#member-list"
+                            hx-swap="outerHTML">Remove</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

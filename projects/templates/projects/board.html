@@ -1,0 +1,116 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Board{% endblock %}
+{% block main_class %}board-main{% endblock %}
+
+{% block extra_head %}
+{% comment %}
+The "?t=" query string cache-busts board.css on every page load (there's no
+asset pipeline/hashed filenames in this project), which matters during
+active development of the board — same trick used on board.js below.
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'board/board.css' %}?t={% now 'U' %}">
+{% endblock %}
+
+{% block content %}
+<div class="board-app" id="board-app">
+
+  <div class="board-toolbar">
+    <div class="board-brand">Roadmapper <span class="mono" style="color:var(--ink-faint);font-weight:500;font-size:11px;">board</span></div>
+    <div class="board-crumbs" id="board-crumbs"></div>
+    <div class="board-spacer"></div>
+    <button class="btn secondary" id="board-edit-project-btn" style="display:none;">Edit project</button>
+    <button class="btn secondary" id="board-add-btn"></button>
+  </div>
+
+  <div class="board-filterbar">
+    <div class="board-search-wrap">
+      <span class="icon">&#128269;</span>
+      <input type="text" id="board-search" placeholder="Search tasks, owners, projects&hellip;">
+    </div>
+    <div class="board-chipgroup" id="board-status-chips"></div>
+    <div class="board-fb-actions">
+      <div class="board-zoom">
+        <button type="button" id="board-zoom-out" title="Zoom out">&minus;</button>
+        <input type="range" id="board-zoom-slider" min="6" max="40" value="22" style="width:80px;">
+        <button type="button" id="board-zoom-in" title="Zoom in">+</button>
+      </div>
+      <button class="btn secondary" id="board-critical-btn">Critical path</button>
+      <a class="btn secondary" id="board-export-csv" href="#">Export CSV</a>
+      <a class="btn secondary" id="board-export-json" href="#">Export JSON</a>
+      <button class="btn secondary" id="board-import-btn">Import JSON</button>
+      <input type="file" id="board-import-file" accept="application/json" style="display:none;">
+      <button class="btn secondary" id="board-snapshot-btn">Snapshot PNG</button>
+    </div>
+  </div>
+
+  <div class="board-substrip" id="board-stat-strip"></div>
+
+  <div class="board-main-row">
+    <div class="board-wrapper">
+      <div class="board-header">
+        <div class="board-corner" id="board-corner-label">
+          <span>Project / Task</span>
+          <select id="board-collapse-level" title="Collapse to level"></select>
+        </div>
+        <div class="board-tl-head-scroll" id="board-tl-head-scroll"><div class="board-tl-head-inner" id="board-tl-head-inner"></div></div>
+      </div>
+      <div class="board-body">
+        <div class="board-label-scroll" id="board-label-scroll"><div class="board-label-inner" id="board-label-inner"></div></div>
+        <div class="board-timeline-scroll" id="board-timeline-scroll"><div class="board-timeline-inner" id="board-timeline-inner"></div></div>
+      </div>
+    </div>
+
+    <div class="board-markers-panel" id="board-markers-panel">
+      <div class="board-markers-panel-head">
+        <span>Milestones, Key Events &amp; Decision Points</span>
+        <select id="board-markers-sort" class="board-markers-sort" title="Sort order">
+          <option value="date">By date</option>
+          <option value="type">Group by type</option>
+        </select>
+      </div>
+      <div class="board-markers-panel-body" id="board-markers-list"></div>
+    </div>
+
+    <div class="board-drawer" id="board-drawer">
+      <div class="board-drawer-head"><h3 id="board-drawer-title">Task</h3><button class="board-drawer-close" id="board-drawer-close">&times;</button></div>
+      <div class="board-drawer-body" id="board-drawer-body"></div>
+      <div class="board-drawer-foot" id="board-drawer-foot"></div>
+    </div>
+  </div>
+</div>
+
+<div class="board-toast" id="board-toast"></div>
+
+<script>
+  {% comment %}
+  board.js is a static file with no access to Django's url template tag, so
+  every backend URL it needs is handed over here as a global. For
+  per-object URLs (settings, CSV/JSON export) that take an id in the path,
+  we render the URL for a placeholder id of 0 and board.js does a plain
+  string replace of "/0/" with the real id at call time (see
+  BOARD_PROJECT_SETTINGS_URL_TEMPLATE.replace('/0/', ...) etc.) rather
+  than making a template tag call per task/project.
+  {% endcomment %}
+  window.BOARD_DATA_URL = "{% url 'projects:board_data' %}";
+  window.BOARD_API_TASKS_URL = "/api/tasks/";
+  window.BOARD_API_LINKS_URL = "/api/links/";
+  window.BOARD_API_TRANSITIONS_URL = "/api/transitions/";
+  window.BOARD_API_MARKERS_URL = "/api/markers/";
+  window.BOARD_API_PROJECTS_URL = "/api/projects/";
+  window.BOARD_PROJECT_SETTINGS_URL_TEMPLATE = "{% url 'projects:settings' 0 %}";
+  window.BOARD_EXPORT_PROJECT_CSV_TEMPLATE = "/projects/0/export.csv";
+  window.BOARD_EXPORT_PORTFOLIO_CSV_URL = "{% url 'projects:portfolio_export_csv' %}";
+  window.BOARD_EXPORT_PROJECT_JSON_TEMPLATE = "/projects/0/export.json";
+  window.BOARD_EXPORT_PORTFOLIO_JSON_URL = "{% url 'projects:portfolio_export_json' %}";
+  window.BOARD_IMPORT_URL = "{% url 'projects:board_import' %}";
+  {% comment %}
+  Deep-link support: ?project=<id> on this page's own URL tells board.js
+  which project view to open on load, instead of defaulting to the
+  portfolio view — board.js keeps this in sync via history.replaceState
+  as the user navigates, so reload/share/back-button land in the same place.
+  {% endcomment %}
+  window.BOARD_INITIAL_PROJECT_ID = {{ request.GET.project|default:"null" }};
+</script>
+<script src="{% static 'board/board.js' %}?t={% now 'U' %}"></script>
+{% endblock %}

@@ -1,0 +1,301 @@
+.board-app {
+  /* Theme tokens, scoped to .board-app rather than :root so this stylesheet
+     can't leak variables into (or collide with) the rest of the site.
+     board.js also reads --critical back out via getComputedStyle() (see
+     getComputedColor()) so SVG stroke colors match this palette even though
+     SVG attributes can't use var() directly. --ontrack/--risk/--complete are
+     the canonical status colors referenced by both bar status-strips and the
+     legend/chips elsewhere in this file. */
+  --paper: #F6F7F5;
+  --paper-alt: #EEF0ED;
+  --ink: #1C2530;
+  --ink-soft: #647080;
+  --ink-faint: #9AA4AD;
+  --line: #DCE1E3;
+  --line-strong: #C3CAD0;
+  --panel: #FFFFFF;
+  --action: #1C2530;
+  --ontrack: #2E6E5E;
+  --risk: #B5502C;
+  --complete: #8A93A0;
+  --critical: #A6231F;
+  --shadow: 0 10px 30px rgba(28,37,48,0.12);
+  --radius: 3px;
+
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  font-size: 13px;
+}
+.board-app .mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* ---------- Toolbar ---------- */
+.board-toolbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 20px; border-bottom: 1px solid var(--line-strong);
+  background: var(--panel); flex-shrink: 0;
+}
+.board-brand { font-weight: 700; font-size: 15px; }
+.board-crumbs { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-soft); }
+.board-crumbs button { background: none; border: none; font: inherit; color: var(--ink-soft); cursor: pointer; padding: 2px 4px; }
+.board-crumbs button:hover { color: var(--ink); text-decoration: underline; }
+.board-crumbs .current { color: var(--ink); font-weight: 600; }
+.board-spacer { flex: 1; }
+
+/* ---------- Filter bar ---------- */
+.board-filterbar { display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+  border-bottom: 1px solid var(--line); background: var(--panel); flex-shrink: 0; flex-wrap: wrap; }
+.board-search-wrap { position: relative; display: flex; align-items: center; }
+.board-search-wrap .icon { position: absolute; left: 9px; font-size: 12px; color: var(--ink-faint); pointer-events: none; }
+#board-search {
+  width: 220px; padding: 6px 10px 6px 26px; border: 1px solid var(--line-strong); border-radius: var(--radius);
+  font: inherit; font-size: 12.5px; background: var(--paper); color: var(--ink);
+}
+.board-chipgroup { display: flex; gap: 6px; }
+.board-chip {
+  padding: 6px 11px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--paper);
+  font-size: 11.5px; font-weight: 600; color: var(--ink-soft); cursor: pointer; user-select: none;
+}
+.board-chip:hover { background: var(--paper-alt); }
+.board-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.board-chip.active.on_track { background: var(--ontrack); border-color: var(--ontrack); }
+.board-chip.active.at_risk { background: var(--risk); border-color: var(--risk); }
+.board-chip.active.complete { background: var(--complete); border-color: var(--complete); }
+.board-fb-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+.board-zoom { display: flex; align-items: center; gap: 4px; }
+.board-zoom button { width: 24px; height: 24px; border: 1px solid var(--line-strong); background: var(--paper); border-radius: 3px; cursor: pointer; }
+
+/* ---------- Stats + legend ---------- */
+.board-substrip { display: flex; align-items: center; gap: 24px; padding: 10px 20px;
+  border-bottom: 1px solid var(--line); background: var(--paper); flex-shrink: 0; }
+.board-stat { display: flex; flex-direction: column; gap: 1px; }
+.board-stat .n { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 15px; }
+.board-stat .l { font-size: 10.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.5px; }
+.board-legend { display: flex; gap: 14px; margin-left: auto; font-size: 11px; color: var(--ink-soft); }
+.board-legend .item { display: flex; align-items: center; gap: 5px; }
+.board-dot { width: 8px; height: 8px; border-radius: 1px; display: inline-block; }
+
+/* ---------- Board ---------- */
+.board-main-row { flex: 1; display: flex; min-height: 0; }
+.board-wrapper { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.board-header { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--line-strong); background: var(--paper); }
+.board-corner {
+  width: 280px; flex-shrink: 0; border-right: 1px solid var(--line-strong); height: 58px;
+  display: flex; align-items: flex-end; justify-content: space-between; padding: 6px 12px 8px;
+  font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.board-corner select {
+  width: auto; font-size: 10px; text-transform: none; letter-spacing: 0; color: var(--ink);
+  padding: 2px 4px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--paper);
+}
+.board-tl-head-scroll { overflow: hidden; flex: 1; position: relative; height: 58px; }
+.board-tl-head-inner { position: relative; height: 58px; }
+.board-fy-band { position: absolute; top: 0; height: 18px; border-left: 1px solid var(--line-strong);
+  font-size: 11px; font-weight: 700; color: var(--ink); padding: 3px 0 0 6px; box-sizing: border-box; }
+.board-q-band { position: absolute; top: 18px; height: 18px; border-left: 1px solid var(--line);
+  font-size: 10px; font-weight: 600; color: var(--ink-soft); padding: 3px 0 0 6px; box-sizing: border-box; }
+.board-month-band { position: absolute; top: 36px; height: 22px; border-left: 1px solid var(--line);
+  font-size: 10.5px; font-weight: 500; color: var(--ink-soft); padding: 4px 0 0 6px; font-family: 'IBM Plex Mono', monospace; box-sizing: border-box; }
+
+.board-body { flex: 1; display: flex; min-height: 0; }
+.board-label-scroll {
+  width: 280px; flex-shrink: 0; overflow-y: auto; overflow-x: hidden;
+  border-right: 1px solid var(--line-strong); background: var(--panel);
+  scrollbar-width: none; /* Firefox: hide this pane's own scrollbar */
+}
+/* Its vertical scroll position is driven programmatically in lockstep with
+   the timeline pane (see syncHeaderScroll in board.js), so a second visible
+   scrollbar here would be redundant/distracting; hidden on both engines. */
+.board-label-scroll::-webkit-scrollbar { display: none; }
+.board-label-inner { position: relative; }
+.board-row-label {
+  position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 6px;
+  padding: 0 10px; border-bottom: 1px solid var(--line); cursor: pointer;
+}
+.board-row-label:hover { background: var(--paper-alt); }
+.board-row-label.project { font-weight: 600; }
+.board-row-label.focused { background: var(--paper-alt); box-shadow: inset 3px 0 0 var(--ink); }
+.board-row-label .chev {
+  width: 32px; flex-shrink: 0; color: var(--ink-faint); font-size: 30px; line-height: 1;
+  text-align: center; cursor: pointer; display: inline-block; transform: rotate(0deg);
+  transition: transform 0.15s ease;
+}
+.board-row-label .chev.expanded { transform: rotate(90deg); }
+.board-row-label .swatch { width: 8px; height: 8px; border-radius: 1px; flex-shrink: 0; }
+.board-row-label .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.board-row-label .badge { font-size: 9.5px; font-family: 'IBM Plex Mono', monospace; color: var(--ink-faint); flex-shrink: 0; }
+.board-row-label .add-sub {
+  width: 16px; height: 16px; flex-shrink: 0; border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--ink-soft); opacity: 0; cursor: pointer;
+}
+.board-row-label:hover .add-sub { opacity: 1; }
+.board-row-label .add-sub:hover { background: var(--line-strong); color: var(--ink); }
+
+.board-timeline-scroll { flex: 1; overflow: auto; position: relative; background: var(--paper); }
+.board-timeline-inner { position: relative; }
+.board-row-bg { position: absolute; left: 0; right: 0; border-bottom: 1px solid var(--line); }
+.board-row-bg.alt { background: rgba(28,37,48,0.015); }
+.board-row-bg.clickable { cursor: pointer; }
+
+.board-bar {
+  position: absolute; height: 22px; border-radius: 2px; top: 9px;
+  display: flex; align-items: center; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(28,37,48,0.15);
+  cursor: pointer; user-select: none;
+}
+.board-bar .fill { position: absolute; top: 0; left: 0; bottom: 0; background: rgba(255,255,255,0.55); }
+.board-bar .tag { position: relative; padding: 0 7px; font-size: 10.5px; font-weight: 600; color: #fff;
+  white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,0.15); pointer-events: none; }
+.board-bar .status-strip { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.board-bar.complete { opacity: 0.62; }
+/* .rollup/.critical use box-shadow instead of border for their outlines so
+   the extra "border" doesn't add to the element's box size and throw off
+   the bar's left/width positioning (which is computed in pixels from date
+   math in board.js). .critical replaces the base 1px inset ring with its
+   own inset ring plus an outer colored ring, rather than combining with
+   .rollup's shadow, since a task can't visually need both at once here. */
+.board-bar.rollup { box-shadow: inset 0 0 0 1.5px rgba(28,37,48,0.32); }
+.board-bar.critical { box-shadow: inset 0 0 0 1px rgba(28,37,48,0.15), 0 0 0 2px var(--critical); }
+
+/* Timeline z-index stacking order (low to high): dependency/transition SVG
+   arrows (2, drawn under everything) < task bars (unlayered, default 0/auto)
+   < marker badges (5) < the "today" line/flag (6) < a focused marker's pulse
+   ring (7, so it isn't clipped by a neighboring marker) < the drawer/toast,
+   which float above the whole board via fixed/high z-index further down. */
+.board-task-marker {
+  position: absolute; z-index: 5; cursor: pointer;
+  width: 30px; height: 30px; transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--panel);
+  box-shadow: 0 0 0 2px currentColor, 0 2px 4px rgba(28,37,48,0.35);
+}
+.board-task-marker.critical { box-shadow: 0 0 0 2px var(--critical), 0 2px 4px rgba(28,37,48,0.35); }
+.board-task-marker .symbol { font-size: 17px; line-height: 1; }
+.board-task-marker .num {
+  position: absolute; bottom: -3px; right: -3px; min-width: 14px; height: 14px;
+  padding: 0 2px; border-radius: 7px; background: var(--ink); color: #fff;
+  font-size: 9px; font-weight: 700; line-height: 14px; text-align: center;
+  box-shadow: 0 0 0 1.5px var(--panel);
+}
+.board-task-marker.focused { z-index: 7; }
+/* Expanding-ring "radar ping" drawn as a ::after pseudo-element (rather than
+   an extra DOM node) so focusMarker()'s highlight is pure CSS once the
+   .focused class is toggled in board.js. */
+.board-task-marker.focused::after {
+  content: ''; position: absolute; inset: -6px; border-radius: 50%;
+  border: 2px solid currentColor; animation: board-marker-pulse 1.3s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes board-marker-pulse {
+  0% { transform: scale(0.75); opacity: 0.9; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+.board-today-line { position: absolute; top: 0; width: 1px; background: var(--risk); opacity: 0.55; z-index: 6; } /* above bars/markers, see stacking note above */
+.board-today-flag { position: absolute; top: -2px; transform: translateX(-50%);
+  font-size: 9px; font-family: 'IBM Plex Mono', monospace; color: var(--risk); background: var(--paper);
+  padding: 0 4px; font-weight: 600; }
+
+svg.board-deps { position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; } /* under bars/markers; pointer-events:none lets clicks pass through to the row/bar beneath the arrows */
+
+/* ---------- Markers panel (persistent right sidebar) ---------- */
+.board-markers-panel {
+  width: 280px; flex-shrink: 0; background: var(--panel);
+  border-left: 1px solid var(--line-strong);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.board-markers-panel-head {
+  padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--ink-soft); border-bottom: 1px solid var(--line);
+  flex-shrink: 0; line-height: 1.4;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+}
+.board-markers-sort {
+  width: auto; max-width: 100%; text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 10.5px;
+  padding: 3px 5px; border: 1px solid var(--line-strong); border-radius: 3px;
+  background: var(--paper); color: var(--ink); flex-shrink: 0; box-sizing: border-box;
+}
+.board-markers-panel-body { flex: 1; overflow-y: auto; padding: 6px; }
+.board-markers-empty { padding: 16px 10px; font-size: 11.5px; color: var(--ink-faint); text-align: center; }
+.board-markers-group-head {
+  padding: 10px 8px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--ink-faint);
+}
+.board-marker-card {
+  display: flex; gap: 9px; padding: 9px 8px; border-bottom: 1px solid var(--line); cursor: pointer;
+}
+.board-marker-card:hover { background: var(--paper-alt); }
+.board-marker-card.focused { background: var(--paper-alt); box-shadow: inset 3px 0 0 var(--ink); }
+.board-marker-card .symbol { flex-shrink: 0; width: 20px; text-align: center; font-size: 16px; line-height: 1.4; }
+.board-marker-card .meta { flex: 1; min-width: 0; }
+.board-marker-card .meta .title { font-size: 12px; font-weight: 600; color: var(--ink); }
+.board-marker-card .meta .sub { font-size: 10.5px; color: var(--ink-soft); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+.board-marker-card .meta .desc { font-size: 11.5px; color: var(--ink); margin-top: 4px; line-height: 1.4; }
+
+/* ---------- Drawer (docked sidebar) ---------- */
+.board-drawer {
+  width: 0; flex-shrink: 0; overflow: hidden; background: var(--panel);
+  border-left: 1px solid var(--line-strong);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.board-drawer.open { width: 360px; }
+.board-drawer-head { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; }
+.board-drawer-head h3 { margin: 0; font-size: 14px; font-weight: 700; flex: 1; }
+.board-drawer-close { background: none; border: none; font-size: 16px; color: var(--ink-soft); cursor: pointer; padding: 2px 6px; }
+.board-drawer-body { padding: 18px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.board-field label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--ink-soft); margin-bottom: 5px; font-weight: 600; }
+.board-field input, .board-field select, .board-field textarea {
+  width: 100%; padding: 7px 9px; border: 1px solid var(--line-strong); border-radius: var(--radius);
+  font: inherit; font-size: 12.5px; background: var(--paper); color: var(--ink); box-sizing: border-box;
+}
+.board-row2 { display: flex; gap: 10px; }
+.board-row2 .board-field { flex: 1; }
+
+.board-rel-section { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; }
+.board-rel-header {
+  display: flex; align-items: center; gap: 6px; padding: 9px 10px; cursor: pointer;
+  background: var(--paper-alt); font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--ink-soft); user-select: none;
+}
+.board-rel-header:hover { background: var(--line); }
+.board-rel-chev { display: inline-block; font-size: 10px; line-height: 1; transform: rotate(0deg); transition: transform 0.15s ease; }
+.board-rel-chev.expanded { transform: rotate(90deg); }
+.board-rel-body {
+  padding: 12px 10px; display: flex; flex-direction: column; gap: 14px;
+}
+.board-checkrow { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+.board-deplist { display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto;
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; background: var(--paper); }
+.board-deplist label { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 400; }
+
+.icon-btn {
+  width: 24px; height: 24px; min-width: 24px; flex-shrink: 0; padding: 0; border: none; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1; cursor: pointer; color: #fff;
+}
+.icon-btn.add { background: #2563eb; }
+.icon-btn.add:hover { background: #1d4ed8; }
+.icon-btn.edit { background: #6b7280; }
+.icon-btn.edit:hover { background: #4b5563; }
+.icon-btn.remove { background: #dc2626; }
+.icon-btn.remove:hover { background: #b91c1c; }
+.icon-btn.cancel { background: #9ca3af; }
+.icon-btn.cancel:hover { background: #6b7280; }
+.board-swatches { display: flex; gap: 8px; }
+.board-swatches .sw { width: 22px; height: 22px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
+.board-swatches .sw.sel { border-color: var(--ink); }
+.board-drawer-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+.board-drawer-foot .btn { flex: 1; justify-content: center; }
+.board-error-text { color: var(--risk); font-size: 11.5px; margin-top: 4px; }
+
+/* z-index: 200 to sit above the drawer (which has no explicit z-index but is
+   a later, non-positioned sibling) and everything else on the page. */
+.board-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--risk);
+  color: #fff; padding: 10px 18px; border-radius: 6px; font-size: 12.5px; z-index: 200; box-shadow: var(--shadow);
+  display: none; }
+.board-toast.show { display: block; }

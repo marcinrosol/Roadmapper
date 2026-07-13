@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% load widget_tweaks %}
+{% block title %}{{ project.name }} settings{% endblock %}
+{% block content %}
+<h1>{{ project.name }} &mdash; settings</h1>
+
+<div class="card" style="max-width:480px;">
+    <h2>Details</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <label>
+            {{ field.label }}
+            {{ field }}
+        </label>
+        {% endfor %}
+        <button type="submit" class="btn">Save</button>
+    </form>
+    {# project.budget is a read-only backend rollup (same idea as board.js's taskBudgetRollup/projectBudget); this form never lets it be edited directly. #}
+    <p><strong>Budget:</strong> ${{ project.budget }} <small>(sum of this project's task budgets)</small></p>
+</div>
+
+<div class="card" style="max-width:480px;">
+    <h2>Members</h2>
+    {% include "projects/_member_list.html" %}
+    {# On submit, htmx POSTs this form and swaps the response fragment in for #member-list (see _member_list.html) instead of a full page reload. #}
+    <form hx-post="{% url 'projects:member_add' project.pk %}" hx-target="#member-list" hx-swap="outerHTML" style="margin-top:1rem;">
+        {% csrf_token %}
+        <label>
+            Add member by username
+            <input type="text" name="username" required>
+        </label>
+        <button type="submit" class="btn">Add</button>
+    </form>
+</div>
+
+<a class="btn secondary" href="{% url 'gantt:project_detail' project.pk %}">Back to Gantt</a>
+{% endblock %}
