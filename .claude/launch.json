@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "django",
-      "runtimeExecutable": "venv/Scripts/python.exe",
-      "runtimeArgs": ["manage.py", "runserver", "0.0.0.0:8000"],
+      "runtimeExecutable": "conda",
+      "runtimeArgs": ["run", "--no-capture-output", "-n", "roadmapper", "python", "manage.py", "runserver", "0.0.0.0:8000"],
       "port": 8000
     }
   ]

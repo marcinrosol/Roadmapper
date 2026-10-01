@@ -2,13 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(git -C \"/c/Users/Windows/Documents/Coding Projects/Roadmapper\" status)",
-      "Bash(./venv/Scripts/python.exe manage.py makemigrations projects)",
+      "Bash(conda run -n roadmapper python manage.py makemigrations *)",
       "Bash(docker info *)",
       "Bash(docker compose *)",
       "Bash(sleep 3)",
-      "Bash(./venv/Scripts/python.exe manage.py migrate)",
-      "Bash(./venv/Scripts/python.exe manage.py test projects gantt)",
-      "Bash(./venv/Scripts/python.exe manage.py test projects gantt -v 2)",
+      "Bash(conda run -n roadmapper python manage.py migrate)",
+      "Bash(conda run -n roadmapper python manage.py test *)",
       "Bash(xargs wc -l)"
     ]
   }

@@ -35,14 +35,20 @@ This starts a `postgres:16` container matching the credentials in
 
 ### 2. Python environment
 
-```bash
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
+Requires [Anaconda](https://www.anaconda.com/download) or
+[Miniconda](https://docs.conda.io/en/latest/miniconda.html). `environment.yml`
+creates a `roadmapper` env with Python 3.12 and installs `requirements.txt`
+into it:
 
-pip install -r requirements.txt
+```bash
+conda env create -f environment.yml
+conda activate roadmapper
+```
+
+After changing `requirements.txt`, sync the env with:
+
+```bash
+conda env update -f environment.yml --prune
 ```
 
 ### 3. Environment variables
