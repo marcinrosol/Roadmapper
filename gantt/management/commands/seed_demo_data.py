@@ -254,6 +254,12 @@ PROJECTS = [
                 "Pilot Line Assembly",
                 datetime.date(2026, 9, 17),
             ),
+            (
+                "Firewall Configuration",
+                "RA-7 Launch",
+                "Safety Testing",
+                datetime.date(2026, 7, 27),
+            ),
         ],
     },
     {
@@ -447,7 +453,20 @@ PROJECTS = [
                 datetime.date(2026, 5, 28),
             ),
         ],
-        "cross_transitions": [],
+        "cross_transitions": [
+            (
+                "Functional Prototype Build",
+                "Office Renovation",
+                "Space Planning",
+                datetime.date(2026, 6, 1),
+            ),
+            (
+                "Certification Approval",
+                "Data Center Migration",
+                "Documentation Handover",
+                datetime.date(2026, 10, 6),
+            ),
+        ],
     },
     {
         "name": "Office Renovation",
@@ -561,7 +580,20 @@ PROJECTS = [
         "transitions": [
             ("Furniture Selection", "Furniture Install", datetime.date(2026, 6, 26)),
         ],
-        "cross_transitions": [],
+        "cross_transitions": [
+            (
+                "Electrical & HVAC",
+                "Data Center Migration",
+                "Rack and Stack",
+                datetime.date(2026, 7, 10),
+            ),
+            (
+                "Final Walkthrough",
+                "Data Center Migration",
+                "Post-Migration Testing",
+                datetime.date(2026, 9, 21),
+            ),
+        ],
     },
 ]
 
