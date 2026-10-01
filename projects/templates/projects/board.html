@@ -32,7 +32,7 @@ active development of the board — same trick used on board.js below.
     <div class="board-fb-actions">
       <div class="board-zoom">
         <button type="button" id="board-zoom-out" title="Zoom out">&minus;</button>
-        <input type="range" id="board-zoom-slider" min="6" max="40" value="22" style="width:80px;">
+        <input type="range" id="board-zoom-slider" min="2" max="40" value="22" style="width:80px;">
         <button type="button" id="board-zoom-in" title="Zoom in">+</button>
       </div>
       <button class="btn secondary" id="board-critical-btn">Critical path</button>
@@ -50,6 +50,7 @@ active development of the board — same trick used on board.js below.
     <div class="board-wrapper">
       <div class="board-header">
         <div class="board-corner" id="board-corner-label">
+          <button type="button" class="board-corner-back" id="board-corner-back" style="display:none;">&larr; All Projects</button>
           <span>Project / Task</span>
           <select id="board-collapse-level" title="Collapse to level"></select>
         </div>

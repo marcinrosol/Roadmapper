@@ -33,6 +33,10 @@
 
   /* ============ constants ============ */
   var ROW_H = 40;
+  // Zoom bounds in px/day (keep in sync with #board-zoom-slider min/max), and
+  // the margin fitToProject leaves on each side of a project's span.
+  var ZOOM_MIN = 2, ZOOM_MAX = 40;
+  var FIT_MARGIN_DAYS = 4;
   var DAY_MS = 86400000;
   var TODAY = (function () {
     var d = new Date();
@@ -329,13 +333,20 @@
     });
   }
 
-  // Highlights a task's row in the left-hand tree when its bar is clicked on
-  // the gantt, mirroring how clicking a marker badge highlights its legend card.
+  // Highlights a task in both panes — its row in the left-hand tree and its
+  // bar on the gantt — whichever one was clicked, mirroring how clicking a
+  // marker badge highlights its legend card (and vice versa).
   function focusTask(taskId) {
     focusedTaskId = taskId;
     renderLabels(lastRows || []);
     var el = document.querySelector('.board-row-label[data-task-id="' + taskId + '"]');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.querySelectorAll('.board-bar.focused').forEach(function (b) { b.classList.remove('focused'); });
+    var bar = document.querySelector('.board-bar[data-task-id="' + taskId + '"]');
+    if (bar) {
+      bar.classList.add('focused');
+      bar.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
   }
   // Resets all expand/collapse state and re-expands rows up to `level` (0 =
   // everything collapsed, 1 = just projects open, 2+ = that many task levels
@@ -351,7 +362,7 @@
     }
     expandTasksToDepth(level - 2);
     state.collapseLevel = level;
-    render();
+    fitToView();
   }
   function renderCollapseLevelControl() {
     var select = document.getElementById('board-collapse-level');
@@ -470,7 +481,39 @@
   function enterProject(projectId) {
     state.view = projectId;
     if (!(('p' + projectId) in state.expanded)) state.expanded['p' + projectId] = true;
+    fitToProject(projectId);
+  }
+
+  // Zooms so the project's full date span (plus a few days' margin) fills the
+  // visible timeline width, then scrolls its start into view. Renders.
+  function fitToProject(projectId) {
+    var s = projectStats(projectId);
+    fitToSpan(s.start, s.end);
+  }
+
+  // Same as fitToProject, but for whatever the current view shows: one
+  // project, or every project with tasks in the portfolio view.
+  function fitToView() {
+    if (state.view !== 'portfolio') return fitToProject(state.view);
+    var mn = null, mx = null;
+    projects.forEach(function (p) {
+      if (!tasks.some(function (t) { return t.project === p.id; })) return;
+      var s = projectStats(p.id);
+      if (mn === null || s.start < mn) mn = s.start;
+      if (mx === null || s.end > mx) mx = s.end;
+    });
+    if (mn === null) { mn = TODAY; mx = TODAY; }
+    fitToSpan(mn, mx);
+  }
+
+  function fitToSpan(spanStart, spanEnd) {
+    var ts = document.getElementById('board-timeline-scroll');
+    var start = addDays(spanStart, -FIT_MARGIN_DAYS), end = addDays(spanEnd, FIT_MARGIN_DAYS);
+    var days = Math.max(dayDiff(start, end), 1);
+    state.pxPerDay = clampZoom(ts.clientWidth / days);
+    computeRange();
     render();
+    ts.scrollLeft = Math.max(0, xFor(start));
   }
 
   /* ============ range ============ */
@@ -726,6 +769,11 @@
     var crumbs = document.getElementById('board-crumbs');
     var addBtn = document.getElementById('board-add-btn');
     var editBtn = document.getElementById('board-edit-project-btn');
+    // Second "All Projects" link in the board's corner header, so there's a
+    // way back without scrolling up to the toolbar crumbs.
+    var cornerBack = document.getElementById('board-corner-back');
+    cornerBack.style.display = state.view === 'portfolio' ? 'none' : '';
+    cornerBack.onclick = function () { state.view = 'portfolio'; render(); };
     if (state.view === 'portfolio') {
       crumbs.innerHTML = '<span class="current">All Projects</span>';
       addBtn.textContent = '+ Add Project';
@@ -800,12 +848,14 @@
     document.getElementById('board-snapshot-btn').onclick = takeSnapshot;
   }
 
-  // Changes the horizontal zoom (pixels per day), clamped to [6, 40], while
+  function clampZoom(px) { return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, px)); }
+
+  // Changes the horizontal zoom (pixels per day), clamped to [ZOOM_MIN, ZOOM_MAX], while
   // keeping the day currently centered in the viewport centered after the
   // resize — computed by converting the current scroll center to a "day"
   // under the old scale, then converting back under the new scale.
   function zoomTo(px) {
-    px = Math.max(6, Math.min(40, px));
+    px = clampZoom(px);
     var ts = document.getElementById('board-timeline-scroll');
     var centerDay = state.range ? (ts.scrollLeft + ts.clientWidth / 2) / state.pxPerDay : 0;
     state.pxPerDay = px;
@@ -1033,7 +1083,7 @@
           addSub.onclick = function (e) { e.stopPropagation(); state.expanded[r.task.id] = true; openTaskDrawer(null, r.project.id, r.task.id); };
           row.appendChild(addSub);
         }
-        row.onclick = function () { openTaskDrawer(r.task.id, r.project.id); };
+        row.onclick = function () { openTaskDrawer(r.task.id, r.project.id); focusTask(r.task.id); };
       }
       inner.appendChild(row);
     });
@@ -1083,7 +1133,29 @@
       '<path d="M0,0 L6,3 L0,6 Z" fill="#3C6E9E"/></marker>';
     svg.appendChild(defs);
     var idxOf = {};
-    rows.forEach(function (r, i) { if (r.type === 'task') idxOf[r.task.id] = i; });
+    var projectRowIdx = {};
+    rows.forEach(function (r, i) {
+      if (r.type === 'task') idxOf[r.task.id] = i;
+      else projectRowIdx[r.project.id] = i;
+    });
+    // Row index where a task is currently drawn: its own row if visible,
+    // else its nearest visible ancestor's, else its project row (undefined
+    // if the project itself is filtered out / not in this view).
+    function visibleRowFor(taskId) {
+      var t = taskById[taskId];
+      if (!t) return undefined;
+      var projectId = t.project;
+      while (t) {
+        if (t.id in idxOf) return idxOf[t.id];
+        t = t.parent ? taskById[t.parent] : null;
+      }
+      return projectRowIdx[projectId];
+    }
+    // Date span of the bar drawn on row i (project rollup or task/summary bar).
+    function rowBarRange(i) {
+      var r = rows[i];
+      return r.type === 'project' ? projectStats(r.project.id) : taskRange(r.task.id);
+    }
     rows.forEach(function (r) {
       if (r.type !== 'task') return;
       (dependsOnIndex[r.task.id] || []).forEach(function (depId) {
@@ -1114,12 +1186,37 @@
       });
     });
     transitions.forEach(function (tr) {
-      if (!(tr.from_task in idxOf) || !(tr.to_task in idxOf)) return;
-      var fromY = idxOf[tr.from_task] * ROW_H + ROW_H / 2;
-      var toY = idxOf[tr.to_task] * ROW_H + ROW_H / 2;
+      var fromTask = taskById[tr.from_task], toTask = taskById[tr.to_task];
+      if (!fromTask || !toTask) return;
+      var fromIdx, toIdx;
+      if (fromTask.project !== toTask.project) {
+        // Cross-project transitions stay visible at any collapse level by
+        // anchoring each end to whichever row currently stands in for it.
+        fromIdx = visibleRowFor(tr.from_task);
+        toIdx = visibleRowFor(tr.to_task);
+        if (fromIdx === undefined || toIdx === undefined || fromIdx === toIdx) return;
+      } else {
+        if (!(tr.from_task in idxOf) || !(tr.to_task in idxOf)) return;
+        fromIdx = idxOf[tr.from_task];
+        toIdx = idxOf[tr.to_task];
+      }
+      var fromY = fromIdx * ROW_H + ROW_H / 2;
+      var toY = toIdx * ROW_H + ROW_H / 2;
       var x = xFor(parseDate(tr.on_date));
+      // Horizontal leg out of the source row's bar to the transition date, the
+      // vertical drop, then a horizontal leg into the target row's bar. When an
+      // end is collapsed, its row's bar is the ancestor's summary bar or the
+      // project bar. A leg is skipped when the date falls within that bar.
+      var fromR = rowBarRange(fromIdx), toR = rowBarRange(toIdx);
+      var fx0 = xFor(fromR.start), fx1 = xFor(fromR.end);
+      var tx0 = xFor(toR.start), tx1 = xFor(toR.end);
+      var sx = x < fx0 ? fx0 : (x > fx1 ? fx1 : x);
+      var d = 'M ' + sx + ' ' + fromY + (sx !== x ? ' H ' + x : '') + ' V ' + toY;
+      // Stop the final leg a few px short of the bar so the arrowhead shows.
+      if (x < tx0) d += ' H ' + (tx0 - 4);
+      else if (x > tx1) d += ' H ' + (tx1 + 4);
       var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', 'M ' + x + ' ' + fromY + ' L ' + x + ' ' + toY);
+      path.setAttribute('d', d);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', '#3C6E9E');
       path.setAttribute('stroke-width', '1.5');
@@ -1146,13 +1243,17 @@
           var x0s = xFor(range.start), x1s = xFor(range.end);
           var sumBar = makeBar(projectColor(r.project), x0s, Math.max(x1s - x0s, state.pxPerDay * 0.6), top, prog, t.name, false, false);
           sumBar.classList.add('rollup');
+          sumBar.dataset.taskId = t.id;
           if (isCritTask) sumBar.classList.add('critical');
+          if (t.id === focusedTaskId) sumBar.classList.add('focused');
           sumBar.onclick = function () { openTaskDrawer(t.id, r.project.id); focusTask(t.id); };
           inner.appendChild(sumBar);
         } else {
           var x0 = xFor(taskStartDate(t)), x1 = xFor(taskEndDate(t));
           var bar2 = makeBar(projectColor(r.project), x0, Math.max(x1 - x0, state.pxPerDay * 0.6), top, taskProgressPct(t), t.name, true, t.status);
+          bar2.dataset.taskId = t.id;
           if (isCritTask) bar2.classList.add('critical');
+          if (t.id === focusedTaskId) bar2.classList.add('focused');
           bar2.onclick = function () { openTaskDrawer(t.id, r.project.id); focusTask(t.id); };
           inner.appendChild(bar2);
         }
@@ -2189,8 +2290,12 @@
       state.view = window.BOARD_INITIAL_PROJECT_ID;
       state.expanded['p' + state.view] = true;
     }
-    computeRange();
-    render();
+    if (state.view !== 'portfolio') {
+      fitToProject(state.view);
+    } else {
+      computeRange();
+      render();
+    }
   }).catch(function (err) {
     document.getElementById('board-label-inner').textContent = 'Failed to load board data: ' + err.message;
   });

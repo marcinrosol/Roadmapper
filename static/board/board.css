@@ -87,7 +87,13 @@
   width: 280px; flex-shrink: 0; border-right: 1px solid var(--line-strong); height: 58px;
   display: flex; align-items: flex-end; justify-content: space-between; padding: 6px 12px 8px;
   font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.5px;
+  position: relative;
 }
+.board-corner-back {
+  position: absolute; top: 5px; left: 8px; background: none; border: none; cursor: pointer;
+  font: inherit; font-size: 11.5px; text-transform: none; letter-spacing: 0; color: var(--ink-soft); padding: 2px 4px;
+}
+.board-corner-back:hover { color: var(--ink); text-decoration: underline; }
 .board-corner select {
   width: auto; font-size: 10px; text-transform: none; letter-spacing: 0; color: var(--ink);
   padding: 2px 4px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--paper);
@@ -160,6 +166,18 @@
    .rollup's shadow, since a task can't visually need both at once here. */
 .board-bar.rollup { box-shadow: inset 0 0 0 1.5px rgba(28,37,48,0.32); }
 .board-bar.critical { box-shadow: inset 0 0 0 1px rgba(28,37,48,0.15), 0 0 0 2px var(--critical); }
+/* Focused bar (row clicked in the left tree, or the bar itself): a pulsing
+   ring like a focused marker's ping. Uses outline rather than ::after or
+   box-shadow, since the bar clips its children (overflow: hidden) and
+   .rollup/.critical already own box-shadow. */
+.board-bar.focused {
+  outline: 2px solid var(--ink); outline-offset: 2px;
+  animation: board-bar-pulse 1.3s ease-out infinite;
+}
+@keyframes board-bar-pulse {
+  0% { outline-offset: 1px; outline-color: rgba(28,37,48,0.9); }
+  100% { outline-offset: 7px; outline-color: rgba(28,37,48,0); }
+}
 
 /* Timeline z-index stacking order (low to high): dependency/transition SVG
    arrows (2, drawn under everything) < task bars (unlayered, default 0/auto)
